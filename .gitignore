@@ -1,0 +1,16 @@
+node_modules
+dist
+.vscode
+.agents
+.codex
+.idea
+*.log
+*.tmp
+*.bak
+*.swp
+.DS_Store
+.env
+.env.local
+.env.development
+.env.test
+.env.production
