@@ -1,5 +1,7 @@
 import * as Three from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { EditorMode } from './mode';
+import { CommandManager } from './command/command';
 
 export interface EditorState {
   scene: Three.Scene;
@@ -19,6 +21,8 @@ export interface EditorState {
   selection: {
     object: Three.Object3D | null;
   };
+  mode: EditorMode;
+  commandManager: CommandManager;
 }
 
 let activeState: EditorState | null = null;

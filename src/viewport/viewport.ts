@@ -3,6 +3,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { editorConfig } from '../config/editor-config';
 import type { EditorState } from '../model/state';
 import { editorLayers } from '../scene/layers';
+import { setupObjectMode } from '../model/object_mode';
+import { CommandManager } from '../model/command/command';
 
 export function createViewport(container: HTMLElement): EditorState {
   const scene = new Three.Scene();
@@ -29,12 +31,16 @@ export function createViewport(container: HTMLElement): EditorState {
     selection: {
       object: null,
     },
+    mode: 'object',
+    commandManager: new CommandManager(),
   };
 
+  setupObjectMode(state);
   container.appendChild(renderer.domElement);
   resizeObserver.observe(container);
   resizeViewport(state);
   container.addEventListener('click', createOnClickSelectionHandler(state));
+  setupGlobalKeybindings(state);
 
   return state;
 }
@@ -126,15 +132,168 @@ function createOnClickSelectionHandler(state: EditorState): (event: MouseEvent) 
 
     mouse.x = ((event.clientX - canvasBounds.left) / canvasBounds.width) * 2 - 1;
     mouse.y = -((event.clientY - canvasBounds.top) / canvasBounds.height) * 2 + 1;
-    
+
     raycaster.layers.set(editorLayers.selectable);
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
     if (intersects.length > 0) {
       state.selection.object = intersects[0].object;
       console.log(`Selected object: ${state.selection.object.name || state.selection.object.id}`);
+      // implement mode face/edge/vertex selection and highlighting here
+      //showVertices(state.selection.object as Three.Mesh, state);
+
     } else {
       state.selection.object = null;
     }
   };
+}
+
+function getSelectedTriangleVertices(intersection: Three.Intersection): Float32Array | null {
+  const mesh = intersection.object as Three.Mesh;
+  const geometry = mesh.geometry as Three.BufferGeometry;
+
+  const position = geometry.getAttribute("position");
+  const index = geometry.index;
+  const face = intersection.face;
+
+  if (!face) return null;
+
+  const vertices = new Float32Array(9);
+
+  const vertexIndices = index
+    ? [
+      index.getX(face.a),
+      index.getX(face.b),
+      index.getX(face.c),
+    ]
+    : [face.a, face.b, face.c];
+
+  for (let i = 0; i < 3; i++) {
+    const vi = vertexIndices[i];
+
+    vertices[i * 3 + 0] = position.getX(vi);
+    vertices[i * 3 + 1] = position.getY(vi);
+    vertices[i * 3 + 2] = position.getZ(vi);
+  }
+
+  return vertices;
+}
+
+function highlightFace(vertices: Float32Array, object: Three.Object3D): Three.Mesh {
+  const highlightMaterial = new Three.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.5, side: Three.DoubleSide });
+  highlightMaterial.polygonOffset = true;
+  highlightMaterial.polygonOffsetFactor = -1;
+  highlightMaterial.polygonOffsetUnits = -1;
+  highlightMaterial.depthWrite = false;
+  const selectedFaceGeometry = new Three.BufferGeometry();
+  selectedFaceGeometry.setAttribute('position', new Three.BufferAttribute(vertices, 3));
+
+  const selectedFaceMesh = new Three.Mesh(selectedFaceGeometry, highlightMaterial);
+  selectedFaceMesh.layers.set(editorLayers.helper);
+  selectedFaceMesh.position.copy((object as Three.Mesh).position);
+  selectedFaceMesh.rotation.copy((object as Three.Mesh).rotation);
+  selectedFaceMesh.scale.copy((object as Three.Mesh).scale);
+
+  return selectedFaceMesh;
+}
+
+function createFaceHighlightFromGroup(
+  mesh: Three.Mesh,
+  materialIndex: number
+): Three.Mesh | null {
+  const geometry = mesh.geometry as Three.BufferGeometry;
+  const position = geometry.getAttribute("position");
+  const index = geometry.index;
+
+  if (!index) return null;
+
+  const group = geometry.groups.find(
+    g => g.materialIndex === materialIndex
+  );
+
+  if (!group) return null;
+
+  const vertices: number[] = [];
+
+  for (let i = group.start; i < group.start + group.count; i++) {
+    const vi = index.getX(i);
+
+    vertices.push(
+      position.getX(vi),
+      position.getY(vi),
+      position.getZ(vi)
+    );
+  }
+
+  const highlightGeometry = new Three.BufferGeometry();
+
+  highlightGeometry.setAttribute(
+    "position",
+    new Three.Float32BufferAttribute(vertices, 3)
+  );
+
+  highlightGeometry.computeVertexNormals();
+
+  const material = new Three.MeshBasicMaterial({
+    color: 0xffaa00,
+    transparent: true,
+    opacity: 0.35,
+    side: Three.DoubleSide,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
+
+  const highlight = new Three.Mesh(highlightGeometry, material);
+
+  highlight.position.copy(mesh.position);
+  highlight.rotation.copy(mesh.rotation);
+  highlight.scale.copy(mesh.scale);
+
+  return highlight;
+}
+
+function showVertices(mesh: Three.Mesh, scene: Three.Scene): Three.Group {
+  const group = new Three.Group();
+
+  const geometry = mesh.geometry as Three.BufferGeometry;
+  const position = geometry.getAttribute("position");
+
+  for (let i = 0; i < position.count; i++) {
+    const vertex = new Three.Vector3().fromBufferAttribute(
+      position,
+      i
+    );
+
+    // Convert local geometry coordinates → world coordinates
+    vertex.applyMatrix4(mesh.matrixWorld);
+
+    const marker = new Three.Mesh(
+      new Three.SphereGeometry(0.02),
+      new Three.MeshBasicMaterial({
+        color: 0x111111,
+      })
+    );
+
+    marker.position.copy(vertex);
+
+    group.add(marker);
+  }
+
+  scene.add(group);
+
+  return group;
+}
+
+function setupGlobalKeybindings(state: EditorState) {
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'z' && (event.ctrlKey || event.metaKey)) {
+      if (event.shiftKey) {
+        state.commandManager.redo();
+      } else {
+        state.commandManager.undo();
+      }
+    }
+  });
 }
