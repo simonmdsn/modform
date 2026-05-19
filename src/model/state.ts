@@ -5,6 +5,7 @@ import { CommandManager } from './command/command';
 
 export interface EditorState {
   scene: Three.Scene;
+  isDragging: boolean;
   camera: Three.PerspectiveCamera;
   renderer: Three.WebGLRenderer;
   controls: OrbitControls;

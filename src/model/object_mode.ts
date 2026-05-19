@@ -26,6 +26,7 @@ export function setupObjectMode(state: EditorState): void {
                 const newPos = obj.position.clone();
                 // only push a command if the position actually changed
                 if (!transformStartPosition.equals(newPos)) {
+                    console.log("New position ", transformStartPosition, newPos);
                     state.commandManager.doCommand(new MoveObjectCommand(obj, transformStartPosition, newPos));
                 }
             }

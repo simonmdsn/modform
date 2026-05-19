@@ -1,4 +1,4 @@
 export const editorLayers = {
-  selectable: 0,
-  helper: 1,
+  helper: 0,
+  selectable: 1,
 } as const;

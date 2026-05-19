@@ -1,30 +1,44 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Three App</title>
-  </head>
 
-  <body>
-    <div id="app">
-      <header id="top-menu">
-        <button>File</button>
-        <button>Edit</button>
-        <button>View</button>
-      </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Three App</title>
+</head>
 
-      <main id="main-layout">
-        <section id="canvas-container"></section>
-        
-        <div id="divider"></div>
-        
-        <aside id="sidebar">
-          Sidebar
-        </aside>
-      </main>
-    </div>
+<body>
+  <div id="app">
+    <header id="top-menu">
+      <button>File</button>
+      <button>Edit</button>
+      <button>View</button>
+    </header>
 
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+
+    <main id="main-layout">
+
+      <section id="canvas-container">
+        <div id="canvas-top-menu">
+          <button>Button</button>
+          <select id="select-mode">
+            <option value="object">Object</option>
+            <option value="vertex">Vertix</option>
+            <option value="edge">Edge</option>
+            <option valye="face">Face</option>
+          </select>
+        </div>
+      </section>
+
+      <div id="divider"></div>
+
+      <aside id="sidebar">
+        Sidebar
+      </aside>
+    </main>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
 </html>

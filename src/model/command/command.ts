@@ -25,10 +25,6 @@ export class CommandManager {
         if (this.commandStack.length > 0) {
             const command = this.commandStack.pop();
             command?.undo();
-            if (command) {
-                console.log(`Undoing command. Command stack size: ${this.commandStack.length}, Undo stack size: ${this.undoStack.length}`);
-                this.undoStack.push(command);
-            }
         }
     }
 
@@ -36,9 +32,6 @@ export class CommandManager {
         if (this.undoStack.length > 0) {
             const command = this.undoStack.pop();
             command?.do();
-            if (command) {
-                this.commandStack.push(command);
-            }
         }
     }
 }

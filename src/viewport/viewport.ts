@@ -5,6 +5,7 @@ import type { EditorState } from '../model/state';
 import { editorLayers } from '../scene/layers';
 import { setupObjectMode } from '../model/object_mode';
 import { CommandManager } from '../model/command/command';
+import { bool } from 'three/tsl';
 
 export function createViewport(container: HTMLElement): EditorState {
   const scene = new Three.Scene();
@@ -14,6 +15,7 @@ export function createViewport(container: HTMLElement): EditorState {
   const resizeObserver = new ResizeObserver(() => resizeViewport(state));
 
   const state: EditorState = {
+    isDragging: false,
     scene,
     camera,
     renderer,
@@ -39,7 +41,7 @@ export function createViewport(container: HTMLElement): EditorState {
   container.appendChild(renderer.domElement);
   resizeObserver.observe(container);
   resizeViewport(state);
-  container.addEventListener('click', createOnClickSelectionHandler(state));
+  renderer.domElement.addEventListener('pointerdown', createOnClickSelectionHandler(state));
   setupGlobalKeybindings(state);
 
   return state;
@@ -123,8 +125,9 @@ function createOrbitControls(
   return controls;
 }
 
-function createOnClickSelectionHandler(state: EditorState): (event: MouseEvent) => void {
-  return (event: MouseEvent) => {
+function createOnClickSelectionHandler(state: EditorState): (event: PointerEvent) => void {
+  return (event: PointerEvent) => {
+    console.log(`Click event x:${event.clientX}, y:${event.clientY}`)
     const { camera, scene, renderer } = state;
     const mouse = new Three.Vector2();
     const raycaster = new Three.Raycaster();
